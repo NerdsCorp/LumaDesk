@@ -88,7 +88,7 @@ See [Installation Guide](docs/INSTALL.md) for detailed options and troubleshooti
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/LumaDesk.git
+   git clone https://github.com/nerdscorp/LumaDesk.git
    cd LumaDesk
    ```
 
@@ -126,9 +126,9 @@ PXE_SERVER_IP=192.168.1.10
 PXE_DHCP_RANGE_START=192.168.1.100
 PXE_DHCP_RANGE_END=192.168.1.200
 
-# Sunshine Ports
-SUNSHINE_PORT_HTTPS=47984
-SUNSHINE_PORT_HTTP=47989
+# Desktop Protocols
+XDMCP_PORT=177
+RDP_PORT=3389
 ```
 
 See `.env.example` for all available options.
@@ -149,12 +149,12 @@ The web UI provides:
 ### User Workflow
 
 1. **Admin creates user** via Web UI
-2. **Admin registers device** and generates pairing token
+2. **Admin registers device** (optional for session tracking)
 3. **Thin client boots** from network (PXE)
-4. **Client connects** to Sunshine server using credentials
-5. **User streams desktop** via Moonlight protocol
+4. **User selects desktop** from session broker login screen
+5. **Client connects** via X11/XDMCP (LAN) or RDP (WAN/Wayland)
 6. **Session monitored** in real-time by admin
-7. **On logout**, client reboots and returns to login screen
+7. **On logout**, client returns to login screen or reboots
 
 ### PXE Boot Setup
 
@@ -222,7 +222,7 @@ LumaDesk/
 │   │   ├── components/    # React components
 │   │   └── services/      # API client
 │   └── public/
-├── sunshine-service/       # Sunshine streaming container
+├── desktop-server/         # Desktop server (X11, XDMCP, xrdp)
 ├── pxe/                    # PXE boot server
 │   ├── config/            # dnsmasq, nginx configs
 │   └── scripts/           # Boot scripts
@@ -243,7 +243,7 @@ make build
 # Build individual components
 docker build -t lumadesk/api:latest ./api
 docker build -t lumadesk/web:latest ./web
-docker build -t lumadesk/sunshine:latest ./sunshine-service
+docker build -t lumadesk/desktop-server:latest ./desktop-server
 docker build -t lumadesk/pxe:latest ./pxe
 docker build -t lumadesk/client:latest ./client
 ```
@@ -305,8 +305,8 @@ docker-compose ps
 # View API logs
 docker-compose logs -f api
 
-# View Sunshine logs
-docker-compose logs -f sunshine
+# View desktop server logs
+docker-compose logs -f desktop-server
 
 # Check database
 docker-compose exec postgres psql -U lumadesk -d lumadesk
@@ -340,16 +340,19 @@ tftp 192.168.1.10 -c get boot.ipxe
 tcpdump -i eth0 port 67 or port 68
 ```
 
-**3. Sunshine not streaming**
+**3. Desktop connections failing**
 ```bash
-# Check GPU passthrough
-docker exec lumadesk-sunshine ls -la /dev/dri
+# Check X server is running
+docker-compose logs desktop-server
 
-# Verify Sunshine is running
-docker-compose logs sunshine
+# Test XDMCP port
+netstat -tulpn | grep 177
 
-# Test Sunshine web UI
-curl -k https://localhost:47984
+# Check RDP/xrdp service
+docker-compose exec desktop-server systemctl status xrdp
+
+# Verify desktop environment
+docker-compose exec desktop-server ps aux | grep -E "(kde|gnome|xfce)"
 ```
 
 **4. Database connection errors**
@@ -386,7 +389,8 @@ See [SECURITY.md](docs/SECURITY.md) for detailed security guidelines.
 - [ ] Set strong JWT secrets
 - [ ] Configure CORS origins
 - [ ] Enable TLS/HTTPS (reverse proxy)
-- [ ] Restrict Sunshine ports to LAN only
+- [ ] Restrict X11/XDMCP ports to LAN only
+- [ ] Configure RDP encryption for WAN access
 - [ ] Regular backups
 - [ ] Update Docker images regularly
 - [ ] Review audit logs
@@ -452,9 +456,11 @@ See [API.md](docs/API.md) for complete API documentation.
 
 ## Performance
 
-- **Latency**: <10ms on LAN
-- **Bandwidth**: 10-50 Mbps per client (depends on resolution/quality)
-- **Concurrent Sessions**: Limited by GPU encoding capacity
+- **Latency**: <5ms on LAN (XDMCP), <20ms WAN (RDP)
+- **Bandwidth**:
+  - XDMCP: 5-20 Mbps per client (LAN)
+  - RDP: 1-10 Mbps per client (depends on resolution/quality)
+- **Concurrent Sessions**: Limited by server CPU/RAM capacity
 - **Boot Time**: 30-60 seconds from power-on to desktop
 
 ## Firewall Rules
@@ -463,9 +469,9 @@ See [API.md](docs/API.md) for complete API documentation.
 # Allow on server
 ufw allow 3000/tcp    # API
 ufw allow 8080/tcp    # Web UI
-ufw allow 47984/tcp   # Sunshine HTTPS
-ufw allow 47989/tcp   # Sunshine HTTP
-ufw allow 48010/tcp   # Sunshine RTSP
+ufw allow 177/udp     # XDMCP
+ufw allow 3389/tcp    # RDP/xrdp
+ufw allow 6000:6010/tcp  # X11 display ports
 ufw allow 69/udp      # TFTP
 ufw allow 8069/tcp    # PXE HTTP
 ufw allow 67/udp      # DHCP (if enabled)
@@ -487,26 +493,26 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## Acknowledgments
 
-- [LizardByte/Sunshine](https://github.com/LizardByte/Sunshine) - Game streaming server
-- [Moonlight](https://moonlight-stream.org/) - Game streaming client
 - [iPXE](https://ipxe.org/) - Network boot firmware
+- [xrdp](https://github.com/neutrinolabs/xrdp) - RDP server for Linux
+- [X.Org](https://www.x.org/) - X Window System implementation
 
 ## Support
 
 - **Documentation**: [docs/](docs/)
-- **Issues**: [GitHub Issues](https://github.com/yourusername/LumaDesk/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/LumaDesk/discussions)
+- **Issues**: [GitHub Issues](https://github.com/nerdscorp/LumaDesk/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/nerdscorp/LumaDesk/discussions)
 
 ## Roadmap
 
 - [ ] LDAP/Active Directory integration
-- [ ] Multi-GPU support and load balancing
 - [ ] Client OTA updates
 - [ ] Session recording and replay
 - [ ] Mobile admin app
-- [ ] Kubernetes deployment option
+- [x] Kubernetes deployment option (See [ARCHITECTURE_SCALE.md](docs/ARCHITECTURE_SCALE.md))
 - [ ] Custom branding and themes
 - [ ] SSO support (OAuth2, SAML)
+- [ ] Wayland native support (without RDP)
 
 ## Screenshots
 
