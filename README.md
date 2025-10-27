@@ -60,35 +60,57 @@ LumaDesk is an enterprise-scale thin client infrastructure that enables network-
 
 ### Installation
 
+#### Option 1: One-Line Install (Recommended)
+
+For a fresh Linux server, use our automated installer:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/yourusername/LumaDesk/main/install.sh | bash
+```
+
+Or with wget:
+
+```bash
+wget -qO- https://raw.githubusercontent.com/yourusername/LumaDesk/main/install.sh | bash
+```
+
+The installer will:
+- ✅ Detect your OS and install Docker
+- ✅ Clone the repository to `/opt/lumadesk`
+- ✅ Generate secure secrets automatically
+- ✅ Configure environment with your server IP
+- ✅ Deploy all services
+- ✅ Display access credentials
+
+See [Installation Guide](docs/INSTALL.md) for detailed options and troubleshooting.
+
+#### Option 2: Manual Installation
+
 1. **Clone the repository**
    ```bash
    git clone https://github.com/yourusername/LumaDesk.git
    cd LumaDesk
    ```
 
-2. **Deploy LumaDesk**
+2. **Configure environment**
+   ```bash
+   cp .env.example .env
+   # Edit .env and set secure passwords
+   ```
+
+3. **Deploy LumaDesk**
    ```bash
    make deploy
    ```
 
-   Or manually:
-   ```bash
-   ./scripts/deploy
+4. **Access the admin UI**
    ```
-
-3. **Access the admin UI**
-   ```
-   URL: http://localhost:8080
+   URL: http://YOUR_SERVER_IP:8080
    Username: admin
-   Password: admin
+   Password: (check .env file)
    ```
 
    **⚠️ IMPORTANT: Change the admin password immediately!**
-
-4. **Configure PXE boot**
-   ```bash
-   make pxe-start
-   ```
 
 ### Configuration
 
