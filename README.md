@@ -65,13 +65,13 @@ LumaDesk is an enterprise-scale thin client infrastructure that enables network-
 For a fresh Linux server, use our automated installer:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/yourusername/LumaDesk/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/nerdscorp/LumaDesk/main/install.sh | bash
 ```
 
 Or with wget:
 
 ```bash
-wget -qO- https://raw.githubusercontent.com/yourusername/LumaDesk/main/install.sh | bash
+wget -qO- https://raw.githubusercontent.com/nerdscorp/LumaDesk/main/install.sh | bash
 ```
 
 The installer will:
