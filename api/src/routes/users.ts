@@ -56,6 +56,7 @@ export async function userRoutes(fastify: FastifyInstance) {
       });
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { password_hash, ...userData } = user;
     return userData;
   });
@@ -176,7 +177,7 @@ export async function userRoutes(fastify: FastifyInstance) {
   // Bulk import users from CSV
   fastify.post('/bulk-import', {
     onRequest: [requireAdmin],
-  }, async (request, reply) => {
+  }, async (request, _reply) => {
     const body = bulkImportSchema.parse(request.body);
     const currentUser = request.user as any;
 
