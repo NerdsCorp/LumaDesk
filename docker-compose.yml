@@ -121,7 +121,7 @@ services:
       - "67:67/udp"
       - "67:67/tcp"
     environment:
-      PXE_DHCP_ENABLED: ${PXE_DHCP_ENABLED:-true}
+      PXE_DHCP_ENABLED: ${PXE_DHCP_ENABLED:-false}
       PXE_DHCP_RANGE_START: ${PXE_DHCP_RANGE_START}
       PXE_DHCP_RANGE_END: ${PXE_DHCP_RANGE_END}
       PXE_DHCP_SUBNET: ${PXE_DHCP_SUBNET}
@@ -135,9 +135,7 @@ services:
       - pxe-http:/var/www/html
       - ./pxe/config:/etc/pxe
     networks:
-      lumadesk-backend:
-      lumadesk-pxe:
-        ipv4_address: ${PXE_SERVER_IP:-192.168.1.10}
+      - lumadesk-backend
     cap_add:
       - NET_ADMIN
       - NET_RAW
@@ -217,11 +215,3 @@ networks:
     driver: bridge
   lumadesk-frontend:
     driver: bridge
-  lumadesk-pxe:
-    driver: macvlan
-    driver_opts:
-      parent: eth0
-    ipam:
-      config:
-        - subnet: ${PXE_DHCP_SUBNET:-192.168.1.0}/24
-          gateway: ${PXE_DHCP_GATEWAY:-192.168.1.1}

@@ -227,7 +227,7 @@ setup_repository() {
     else
         log_info "Cloning LumaDesk repository to $INSTALL_DIR..."
         sudo mkdir -p $(dirname "$INSTALL_DIR")
-        sudo git clone https://github.com/yourusername/LumaDesk.git "$INSTALL_DIR"
+        sudo git clone https://github.com/nerdscorp/LumaDesk.git "$INSTALL_DIR"
         sudo chown -R $USER:$USER "$INSTALL_DIR"
         cd "$INSTALL_DIR"
         log_success "Repository cloned"
@@ -277,6 +277,7 @@ configure_environment() {
     sed -i "s/JWT_SECRET=.*/JWT_SECRET=$JWT_SECRET/" .env
     sed -i "s/JWT_REFRESH_SECRET=.*/JWT_REFRESH_SECRET=$JWT_REFRESH_SECRET/" .env
     sed -i "s/POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=$POSTGRES_PASSWORD/" .env
+    sed -i "s|DATABASE_URL=.*|DATABASE_URL=postgresql://lumadesk:$POSTGRES_PASSWORD@postgres:5432/lumadesk|" .env
     sed -i "s/ADMIN_PASSWORD=.*/ADMIN_PASSWORD=$ADMIN_PASSWORD/" .env
     sed -i "s/PXE_SERVER_IP=.*/PXE_SERVER_IP=$SERVER_IP/" .env
 
@@ -332,6 +333,10 @@ configure_firewall() {
 # Deploy LumaDesk
 deploy_lumadesk() {
     log_info "Deploying LumaDesk..."
+
+    # Ensure we're in the correct directory
+    INSTALL_DIR="${INSTALL_DIR:-/opt/lumadesk}"
+    cd "$INSTALL_DIR"
 
     echo ""
     echo "Select deployment mode:"
