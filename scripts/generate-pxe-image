@@ -1,0 +1,65 @@
+#!/bin/bash
+# Generate PXE boot image (kernel + initramfs) from client container
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+cd "$PROJECT_ROOT"
+
+echo "========================================="
+echo "Generating PXE Boot Image"
+echo "========================================="
+
+# Build client container first
+echo "Building client container..."
+docker build -t lumadesk/client:latest ./client
+
+# Create temporary container to extract files
+echo "Extracting boot files..."
+CONTAINER_ID=$(docker create lumadesk/client:latest)
+
+# Create output directory
+mkdir -p ./pxe-boot-files
+
+# Try to copy kernel and initramfs (if they exist in the container)
+# Note: In a real implementation, you would build these properly
+echo "Creating placeholder boot files..."
+
+# For now, create placeholder files with instructions
+cat > ./pxe-boot-files/README.txt <<EOF
+PXE Boot Files Placeholder
+
+To create actual bootable kernel and initramfs, you need to:
+
+1. Build a minimal Linux kernel with network and storage drivers
+2. Create an initramfs containing:
+   - BusyBox or similar utilities
+   - Network configuration scripts
+   - LumaDesk client agent
+   - Docker or containerd runtime
+   - Client container image
+
+See docs/PXE_BUILD.md for detailed instructions.
+
+Alternative: Use a pre-built minimal Linux like:
+- Alpine Linux netboot
+- Tiny Core Linux
+- Buildroot-based custom image
+EOF
+
+# Cleanup
+docker rm "$CONTAINER_ID" > /dev/null
+
+echo ""
+echo "Note: Actual kernel and initramfs generation requires:"
+echo "  1. Kernel compilation with network/storage drivers"
+echo "  2. Initramfs with busybox and client runtime"
+echo "  3. Docker/containerd embedded in initramfs"
+echo ""
+echo "See ./pxe-boot-files/README.txt for details"
+echo ""
+echo "For testing, you can use Alpine Linux netboot:"
+echo "  wget http://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/x86_64/netboot/vmlinuz-lts"
+echo "  wget http://dl-cdn.alpinelinux.org/alpine/latest-stable/releases/x86_64/netboot/initramfs-lts"

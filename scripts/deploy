@@ -1,0 +1,73 @@
+#!/bin/bash
+# Deploy LumaDesk using Docker Compose
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+cd "$PROJECT_ROOT"
+
+echo "========================================="
+echo "Deploying LumaDesk"
+echo "========================================="
+
+# Check if .env exists
+if [ ! -f .env ]; then
+    echo "Creating .env file from .env.example..."
+    cp .env.example .env
+    echo ""
+    echo "WARNING: Please edit .env and set secure passwords!"
+    echo "Especially change:"
+    echo "  - JWT_SECRET"
+    echo "  - JWT_REFRESH_SECRET"
+    echo "  - POSTGRES_PASSWORD"
+    echo "  - ADMIN_PASSWORD"
+    echo ""
+    read -p "Press Enter to continue or Ctrl+C to abort..."
+fi
+
+# Pull base images
+echo ""
+echo "Pulling base images..."
+docker-compose pull postgres 2>/dev/null || true
+
+# Build containers
+echo ""
+echo "Building containers..."
+./scripts/build-all
+
+# Start services
+echo ""
+echo "Starting services..."
+docker-compose up -d
+
+# Wait for services to be healthy
+echo ""
+echo "Waiting for services to be healthy..."
+sleep 10
+
+# Check service status
+echo ""
+echo "Service status:"
+docker-compose ps
+
+echo ""
+echo "========================================="
+echo "LumaDesk deployed successfully!"
+echo "========================================="
+echo ""
+echo "Access points:"
+echo "  Web UI:  http://localhost:8080"
+echo "  API:     http://localhost:3000"
+echo "  PXE:     http://localhost:8069"
+echo ""
+echo "Default credentials:"
+echo "  Username: admin"
+echo "  Password: admin (CHANGE THIS IMMEDIATELY!)"
+echo ""
+echo "View logs:"
+echo "  docker-compose logs -f"
+echo ""
+echo "Stop services:"
+echo "  docker-compose down"

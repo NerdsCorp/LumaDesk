@@ -1,0 +1,48 @@
+#!/bin/bash
+# Build all LumaDesk containers
+
+set -e
+
+echo "========================================="
+echo "Building LumaDesk Containers"
+echo "========================================="
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+cd "$PROJECT_ROOT"
+
+# Build API
+echo ""
+echo "Building API container..."
+docker build -t lumadesk/api:latest ./api
+
+# Build Web UI
+echo ""
+echo "Building Web UI container..."
+docker build -t lumadesk/web:latest \
+  --build-arg VITE_API_URL="${VITE_API_URL:-http://localhost:3000}" \
+  ./web
+
+# Build Sunshine Service
+echo ""
+echo "Building Sunshine service container..."
+docker build -t lumadesk/sunshine:latest ./sunshine-service
+
+# Build PXE Server
+echo ""
+echo "Building PXE server container..."
+docker build -t lumadesk/pxe:latest ./pxe
+
+# Build Client
+echo ""
+echo "Building client container..."
+docker build -t lumadesk/client:latest ./client
+
+echo ""
+echo "========================================="
+echo "Build completed successfully!"
+echo "========================================="
+echo ""
+echo "Images created:"
+docker images | grep lumadesk

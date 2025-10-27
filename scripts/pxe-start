@@ -1,0 +1,72 @@
+#!/bin/bash
+# Start PXE server and prepare boot files
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+cd "$PROJECT_ROOT"
+
+echo "========================================="
+echo "Starting LumaDesk PXE Server"
+echo "========================================="
+
+# Check if .env exists
+if [ ! -f .env ]; then
+    echo "ERROR: .env file not found!"
+    echo "Run ./scripts/deploy first"
+    exit 1
+fi
+
+# Load environment variables
+source .env
+
+# Create PXE directories if they don't exist
+mkdir -p pxe/tftp pxe/http
+
+# Build PXE container
+echo "Building PXE server..."
+docker build -t lumadesk/pxe:latest ./pxe
+
+# Start PXE server
+echo "Starting PXE server..."
+docker-compose up -d pxe
+
+# Wait for PXE server to be ready
+echo "Waiting for PXE server to start..."
+sleep 5
+
+# Check if boot files exist
+echo ""
+echo "Checking boot files..."
+if docker exec lumadesk-pxe ls /var/www/html/vmlinuz > /dev/null 2>&1; then
+    echo "✓ Kernel found"
+else
+    echo "✗ Kernel not found (upload vmlinuz to PXE HTTP directory)"
+fi
+
+if docker exec lumadesk-pxe ls /var/www/html/initramfs.img > /dev/null 2>&1; then
+    echo "✓ Initramfs found"
+else
+    echo "✗ Initramfs not found (upload initramfs.img to PXE HTTP directory)"
+fi
+
+echo ""
+echo "========================================="
+echo "PXE Server Status"
+echo "========================================="
+docker-compose ps pxe
+
+echo ""
+echo "PXE Server Information:"
+echo "  TFTP: udp://${PXE_SERVER_IP}:69"
+echo "  HTTP: http://${PXE_SERVER_IP}:8069"
+echo "  DHCP: ${PXE_DHCP_ENABLED}"
+echo ""
+echo "Configure your DHCP server to point to:"
+echo "  Next Server: ${PXE_SERVER_IP}"
+echo "  Filename: undionly.kpxe (BIOS) or ipxe.efi (UEFI)"
+echo ""
+echo "Test PXE boot with QEMU:"
+echo "  ./scripts/test-pxe-boot"

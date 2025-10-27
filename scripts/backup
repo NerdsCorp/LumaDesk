@@ -1,0 +1,56 @@
+#!/bin/bash
+# Backup LumaDesk data and configuration
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+cd "$PROJECT_ROOT"
+
+BACKUP_DIR="${BACKUP_DIR:-./backups}"
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+BACKUP_FILE="${BACKUP_DIR}/lumadesk_backup_${TIMESTAMP}.tar.gz"
+
+echo "========================================="
+echo "Backing up LumaDesk"
+echo "========================================="
+
+# Create backup directory
+mkdir -p "$BACKUP_DIR"
+
+# Create temporary directory for backup
+TEMP_DIR=$(mktemp -d)
+trap "rm -rf $TEMP_DIR" EXIT
+
+# Backup database
+echo "Backing up database..."
+docker-compose exec -T postgres pg_dump -U lumadesk lumadesk > "$TEMP_DIR/database.sql"
+
+# Backup volumes
+echo "Backing up volumes..."
+docker run --rm \
+    -v lumadesk_postgres-data:/data \
+    -v "$TEMP_DIR":/backup \
+    alpine tar czf /backup/postgres-data.tar.gz -C /data .
+
+docker run --rm \
+    -v lumadesk_sunshine-config:/data \
+    -v "$TEMP_DIR":/backup \
+    alpine tar czf /backup/sunshine-config.tar.gz -C /data .
+
+# Backup configuration
+echo "Backing up configuration..."
+cp .env "$TEMP_DIR/env" 2>/dev/null || true
+cp docker-compose.yml "$TEMP_DIR/"
+
+# Create final archive
+echo "Creating backup archive..."
+tar czf "$BACKUP_FILE" -C "$TEMP_DIR" .
+
+echo ""
+echo "========================================="
+echo "Backup completed successfully!"
+echo "========================================="
+echo "Backup file: $BACKUP_FILE"
+echo "Size: $(du -h "$BACKUP_FILE" | cut -f1)"

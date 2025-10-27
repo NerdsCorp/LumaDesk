@@ -1,0 +1,48 @@
+#!/bin/bash
+# Test PXE boot using QEMU
+
+set -e
+
+echo "========================================="
+echo "Testing PXE Boot with QEMU"
+echo "========================================="
+
+# Check if QEMU is installed
+if ! command -v qemu-system-x86_64 &> /dev/null; then
+    echo "ERROR: QEMU is not installed"
+    echo "Install with: apt-get install qemu-system-x86 (Ubuntu/Debian)"
+    echo "           or: brew install qemu (macOS)"
+    exit 1
+fi
+
+# Load environment
+if [ -f .env ]; then
+    source .env
+fi
+
+PXE_SERVER_IP=${PXE_SERVER_IP:-192.168.1.10}
+
+echo "Starting QEMU VM for PXE boot test..."
+echo "Server: $PXE_SERVER_IP"
+echo ""
+echo "Note: This requires network configuration to reach the PXE server"
+echo "Press Ctrl+C to exit"
+echo ""
+
+# Create a temporary disk for testing
+DISK_IMG=$(mktemp -u).img
+qemu-img create -f qcow2 "$DISK_IMG" 10G
+
+# Run QEMU with PXE boot
+qemu-system-x86_64 \
+    -m 2048 \
+    -smp 2 \
+    -boot n \
+    -netdev user,id=net0,tftp=./pxe/tftp,bootfile=boot.ipxe \
+    -device e1000,netdev=net0 \
+    -drive file="$DISK_IMG",format=qcow2 \
+    -vga std \
+    -name "LumaDesk PXE Test"
+
+# Cleanup
+rm -f "$DISK_IMG"

@@ -1,0 +1,185 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: lumadesk-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - lumadesk-backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # API Backend
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    container_name: lumadesk-api
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-3000}:3000"
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN}
+      SESSION_TOKEN_EXPIRES_IN: ${SESSION_TOKEN_EXPIRES_IN}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+      RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      SUNSHINE_HOST: sunshine
+      SUNSHINE_PORT: ${SUNSHINE_PORT_HTTPS}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - lumadesk-backend
+      - lumadesk-frontend
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Web UI
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+    container_name: lumadesk-web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      - api
+    networks:
+      - lumadesk-frontend
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Sunshine Streaming Service
+  sunshine:
+    build:
+      context: ./sunshine-service
+      dockerfile: Dockerfile
+    container_name: lumadesk-sunshine
+    restart: unless-stopped
+    ports:
+      - "${SUNSHINE_PORT_HTTPS:-47984}:47984"
+      - "${SUNSHINE_PORT_HTTP:-47989}:47989"
+      - "${SUNSHINE_PORT_WEB:-47990}:47990"
+      - "${SUNSHINE_PORT_RTSP:-48010}:48010"
+    environment:
+      PUID: ${SUNSHINE_UID:-1000}
+      PGID: ${SUNSHINE_GID:-1000}
+      TZ: UTC
+    volumes:
+      - sunshine-config:/config
+      # GPU device access (adjust for your system)
+      - /dev/dri:/dev/dri
+    devices:
+      # Uncomment and adjust based on your GPU
+      # - /dev/nvidia0:/dev/nvidia0
+      # - /dev/nvidiactl:/dev/nvidiactl
+      # - /dev/nvidia-uvm:/dev/nvidia-uvm
+      - /dev/dri:/dev/dri
+    networks:
+      - lumadesk-backend
+    # Required for GPU access and input devices
+    privileged: false
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - apparmor=unconfined
+
+  # PXE Boot Service
+  pxe:
+    build:
+      context: ./pxe
+      dockerfile: Dockerfile
+    container_name: lumadesk-pxe
+    restart: unless-stopped
+    ports:
+      - "${PXE_PORT_TFTP:-69}:69/udp"
+      - "${PXE_PORT_HTTP:-8069}:80"
+      # DHCP ports (only if PXE_DHCP_ENABLED=true)
+      - "67:67/udp"
+      - "67:67/tcp"
+    environment:
+      PXE_DHCP_ENABLED: ${PXE_DHCP_ENABLED:-true}
+      PXE_DHCP_RANGE_START: ${PXE_DHCP_RANGE_START}
+      PXE_DHCP_RANGE_END: ${PXE_DHCP_RANGE_END}
+      PXE_DHCP_SUBNET: ${PXE_DHCP_SUBNET}
+      PXE_DHCP_NETMASK: ${PXE_DHCP_NETMASK}
+      PXE_DHCP_GATEWAY: ${PXE_DHCP_GATEWAY}
+      PXE_DHCP_DNS: ${PXE_DHCP_DNS}
+      PXE_SERVER_IP: ${PXE_SERVER_IP}
+      API_URL: http://api:3000
+    volumes:
+      - pxe-tftp:/var/lib/tftpboot
+      - pxe-http:/var/www/html
+      - ./pxe/config:/etc/pxe
+    networks:
+      lumadesk-backend:
+      lumadesk-pxe:
+        ipv4_address: ${PXE_SERVER_IP:-192.168.1.10}
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+
+  # Optional: Local Docker Registry
+  registry:
+    image: registry:2
+    container_name: lumadesk-registry
+    restart: unless-stopped
+    ports:
+      - "${REGISTRY_PORT:-5000}:5000"
+    volumes:
+      - registry-data:/var/lib/registry
+    networks:
+      - lumadesk-backend
+    profiles:
+      - registry
+
+volumes:
+  postgres-data:
+  sunshine-config:
+  pxe-tftp:
+  pxe-http:
+  registry-data:
+
+networks:
+  lumadesk-backend:
+    driver: bridge
+  lumadesk-frontend:
+    driver: bridge
+  lumadesk-pxe:
+    driver: macvlan
+    driver_opts:
+      parent: eth0
+    ipam:
+      config:
+        - subnet: ${PXE_DHCP_SUBNET:-192.168.1.0}/24
+          gateway: ${PXE_DHCP_GATEWAY:-192.168.1.1}
