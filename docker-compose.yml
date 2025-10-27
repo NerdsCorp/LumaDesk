@@ -44,8 +44,8 @@ services:
       RATE_LIMIT_WINDOW_MS: ${RATE_LIMIT_WINDOW_MS}
       RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS}
       LOG_LEVEL: ${LOG_LEVEL:-info}
-      SUNSHINE_HOST: sunshine
-      SUNSHINE_PORT: ${SUNSHINE_PORT_HTTPS}
+      XSERVER_HOST: xserver
+      XDMCP_PORT: ${XDMCP_PORT:-177}
     depends_on:
       postgres:
         condition: service_healthy
@@ -79,40 +79,33 @@ services:
       timeout: 10s
       retries: 3
 
-  # Sunshine Streaming Service
-  sunshine:
+  # X Server Service (XDMCP)
+  xserver:
     build:
-      context: ./sunshine-service
+      context: ./xserver-service
       dockerfile: Dockerfile
-    container_name: lumadesk-sunshine
+    container_name: lumadesk-xserver
     restart: unless-stopped
     ports:
-      - "${SUNSHINE_PORT_HTTPS:-47984}:47984"
-      - "${SUNSHINE_PORT_HTTP:-47989}:47989"
-      - "${SUNSHINE_PORT_WEB:-47990}:47990"
-      - "${SUNSHINE_PORT_RTSP:-48010}:48010"
+      - "${XDMCP_PORT:-177}:177/udp"
+      - "6000-6010:6000-6010/tcp"
     environment:
-      PUID: ${SUNSHINE_UID:-1000}
-      PGID: ${SUNSHINE_GID:-1000}
       TZ: UTC
+      DISPLAY_MANAGER: lightdm
+      DESKTOP_ENVIRONMENT: xfce4
     volumes:
-      - sunshine-config:/config
-      # GPU device access (adjust for your system)
-      - /dev/dri:/dev/dri
-    devices:
-      # Uncomment and adjust based on your GPU
-      # - /dev/nvidia0:/dev/nvidia0
-      # - /dev/nvidiactl:/dev/nvidiactl
-      # - /dev/nvidia-uvm:/dev/nvidia-uvm
-      - /dev/dri:/dev/dri
+      - xserver-home:/home
+      - xserver-logs:/var/log/lightdm
     networks:
       - lumadesk-backend
-    # Required for GPU access and input devices
-    privileged: false
+    # Required for X server
+    tmpfs:
+      - /tmp:mode=1777
+      - /run
     cap_add:
-      - SYS_ADMIN
+      - SYS_TTY_CONFIG
     security_opt:
-      - apparmor=unconfined
+      - seccomp:unconfined
 
   # PXE Boot Service
   pxe:
@@ -165,7 +158,8 @@ services:
 
 volumes:
   postgres-data:
-  sunshine-config:
+  xserver-home:
+  xserver-logs:
   pxe-tftp:
   pxe-http:
   registry-data:

@@ -24,10 +24,10 @@ docker build -t lumadesk/web:latest \
   --build-arg VITE_API_URL="${VITE_API_URL:-http://localhost:3000}" \
   ./web
 
-# Build Sunshine Service
+# Build X Server Service
 echo ""
-echo "Building Sunshine service container..."
-docker build -t lumadesk/sunshine:latest ./sunshine-service
+echo "Building X Server service container..."
+docker build -t lumadesk/xserver:latest ./xserver-service
 
 # Build PXE Server
 echo ""

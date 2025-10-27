@@ -2,14 +2,14 @@
 
 ![LumaDesk Logo](docs/logo.png)
 
-**Open-source Sun Ray-style hotdesking system built on Sunshine streaming server**
+**Open-source Sun Ray-style hotdesking system with X server and XDMCP**
 
-LumaDesk is a complete thin client infrastructure that enables network-booted workstations to stream desktop sessions from a central server. Perfect for hotdesking environments, labs, kiosks, and VDI deployments.
+LumaDesk is a complete thin client infrastructure that enables network-booted workstations to connect to a central X server using traditional XDMCP protocol. Perfect for hotdesking environments, labs, kiosks, and VDI deployments.
 
 ## Features
 
 - 🚀 **PXE Boot**: Thin clients boot from network - no local storage required
-- 🖥️ **Sunshine Streaming**: High-performance desktop streaming via Moonlight protocol
+- 🖥️ **X Server/XDMCP**: Traditional thin client protocol - simple and efficient
 - 👥 **User Management**: Web-based admin UI for managing users and sessions
 - 🔐 **Secure Authentication**: JWT-based auth with role-based access control
 - 📊 **Session Monitoring**: Real-time monitoring of active sessions and devices
@@ -28,8 +28,8 @@ LumaDesk is a complete thin client infrastructure that enables network-booted wo
 ┌────────────────────┴────────────────────────────────────┐
 │                   LumaDesk Server                       │
 │  ┌──────────┬──────────┬──────────┬──────────────────┐ │
-│  │   Web    │   API    │ Sunshine │   PXE Server    │ │
-│  │   UI     │ Backend  │ Streaming│ (TFTP/DHCP/HTTP)│ │
+│  │   Web    │   API    │ X Server │   PXE Server    │ │
+│  │   UI     │ Backend  │  (XDMCP) │ (TFTP/DHCP/HTTP)│ │
 │  └──────────┴──────────┴──────────┴──────────────────┘ │
 │  ┌──────────────────────────────────────────────────┐  │
 │  │            PostgreSQL Database                    │  │
@@ -42,7 +42,7 @@ LumaDesk is a complete thin client infrastructure that enables network-booted wo
 ### Prerequisites
 
 - Docker and Docker Compose
-- Linux server with GPU (Intel/AMD/NVIDIA)
+- Linux server (no GPU required for X server)
 - Network with DHCP capability
 - At least 4GB RAM and 20GB storage
 

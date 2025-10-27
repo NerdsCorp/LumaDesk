@@ -1,5 +1,5 @@
 # LumaDesk Client Runtime Container
-# Minimal Alpine-based client that runs Moonlight and connects to Sunshine
+# Minimal Alpine-based client that runs X server with XDMCP
 
 FROM alpine:latest
 
@@ -12,17 +12,11 @@ RUN apk add --no-cache \
     procps \
     net-tools \
     iproute2 \
-    xorg-server \
-    xf86-video-fbdev \
-    xf86-input-evdev \
-    xinit \
-    openbox \
     && rm -rf /var/cache/apk/*
 
-# Install Moonlight (placeholder - will need to build or download binary)
-# For now, we'll create a script that can download and setup Moonlight
-COPY scripts/install-moonlight.sh /tmp/
-RUN chmod +x /tmp/install-moonlight.sh && /tmp/install-moonlight.sh
+# Install X.org server for XDMCP thin client
+COPY scripts/install-xorg.sh /tmp/
+RUN chmod +x /tmp/install-xorg.sh && /tmp/install-xorg.sh
 
 # Create lumadesk user
 RUN addgroup -g 1000 lumadesk && \
@@ -31,10 +25,8 @@ RUN addgroup -g 1000 lumadesk && \
 # Copy client agent
 COPY scripts/client-agent.sh /usr/local/bin/lumadesk-agent
 COPY scripts/client-init.sh /usr/local/bin/lumadesk-init
-COPY rootfs/xinitrc /home/lumadesk/.xinitrc
 
-RUN chmod +x /usr/local/bin/lumadesk-agent /usr/local/bin/lumadesk-init && \
-    chown -R lumadesk:lumadesk /home/lumadesk
+RUN chmod +x /usr/local/bin/lumadesk-agent /usr/local/bin/lumadesk-init
 
 # Create config directory
 RUN mkdir -p /etc/lumadesk /var/log/lumadesk && \
