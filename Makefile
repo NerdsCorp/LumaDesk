@@ -32,23 +32,23 @@ deploy:
 	@./scripts/deploy
 
 start:
-	@docker-compose up -d
+	@docker compose up -d
 	@echo "Services started. Access web UI at http://localhost:8080"
 
 stop:
-	@docker-compose down
+	@docker compose down
 
 restart:
-	@docker-compose restart
+	@docker compose restart
 
 logs:
-	@docker-compose logs -f
+	@docker compose logs -f
 
 clean:
 	@echo "WARNING: This will remove all containers, volumes, and data!"
 	@read -p "Continue? (yes/no): " CONFIRM && [ "$$CONFIRM" = "yes" ] || exit 1
-	@docker-compose down -v
-	@docker rmi lumadesk/api lumadesk/web lumadesk/sunshine lumadesk/pxe lumadesk/client 2>/dev/null || true
+	@docker compose down -v
+	@docker rmi lumadesk/api lumadesk/web lumadesk/xserver lumadesk/pxe lumadesk/client 2>/dev/null || true
 	@echo "Cleanup completed"
 
 pxe-start:

@@ -8,8 +8,19 @@ PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 cd "$PROJECT_ROOT"
 
+# Detect docker compose command
+if docker compose version &> /dev/null; then
+    DOCKER_COMPOSE="docker compose"
+elif command -v docker-compose &> /dev/null; then
+    DOCKER_COMPOSE="docker-compose"
+else
+    echo "ERROR: Docker Compose is not installed"
+    exit 1
+fi
+
 echo "========================================="
 echo "Deploying LumaDesk"
+echo "Using: $DOCKER_COMPOSE"
 echo "========================================="
 
 # Check if .env exists
@@ -30,7 +41,7 @@ fi
 # Pull base images
 echo ""
 echo "Pulling base images..."
-docker-compose pull postgres 2>/dev/null || true
+$DOCKER_COMPOSE pull postgres 2>/dev/null || true
 
 # Build containers
 echo ""
@@ -40,7 +51,7 @@ echo "Building containers..."
 # Start services
 echo ""
 echo "Starting services..."
-docker-compose up -d
+$DOCKER_COMPOSE up -d
 
 # Wait for services to be healthy
 echo ""
@@ -50,7 +61,7 @@ sleep 10
 # Check service status
 echo ""
 echo "Service status:"
-docker-compose ps
+$DOCKER_COMPOSE ps
 
 echo ""
 echo "========================================="
@@ -67,7 +78,7 @@ echo "  Username: admin"
 echo "  Password: admin (CHANGE THIS IMMEDIATELY!)"
 echo ""
 echo "View logs:"
-echo "  docker-compose logs -f"
+echo "  $DOCKER_COMPOSE logs -f"
 echo ""
 echo "Stop services:"
-echo "  docker-compose down"
+echo "  $DOCKER_COMPOSE down"
