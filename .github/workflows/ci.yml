@@ -84,7 +84,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        component: [api, web, sunshine-service, pxe, client]
+        component: [api, web, xserver-service, rdp-service, session-broker, pxe, client]
     steps:
       - uses: actions/checkout@v4
 
