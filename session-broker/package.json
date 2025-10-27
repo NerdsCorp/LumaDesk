@@ -1,0 +1,22 @@
+{
+  "name": "lumadesk-session-broker",
+  "version": "1.0.0",
+  "description": "LumaDesk Session Broker - Load balancing and session distribution",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js"
+  },
+  "keywords": ["lumadesk", "session-broker", "load-balancing"],
+  "author": "LumaDesk Contributors",
+  "license": "MIT",
+  "dependencies": {
+    "fastify": "^4.25.2",
+    "redis": "^4.6.11",
+    "pino": "^8.17.2",
+    "axios": "^1.6.5"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  }
+}

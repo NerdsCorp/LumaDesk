@@ -2,19 +2,22 @@
 
 ![LumaDesk Logo](docs/logo.png)
 
-**Open-source Sun Ray-style hotdesking system with X server and XDMCP**
+**Open-source Sun Ray-style hotdesking system with X server/XDMCP and RDP**
 
-LumaDesk is a complete thin client infrastructure that enables network-booted workstations to connect to a central X server using traditional XDMCP protocol. Perfect for hotdesking environments, labs, kiosks, and VDI deployments.
+LumaDesk is an enterprise-scale thin client infrastructure that enables network-booted workstations to connect to centralized desktop servers. Supports both traditional X11/XDMCP and modern RDP for Wayland. **Scales to 1000+ concurrent users** with Kubernetes orchestration. Perfect for hotdesking environments, labs, kiosks, and enterprise VDI deployments.
 
 ## Features
 
 - 🚀 **PXE Boot**: Thin clients boot from network - no local storage required
-- 🖥️ **X Server/XDMCP**: Traditional thin client protocol - simple and efficient
+- 🖥️ **Dual Protocol**: X11/XDMCP for LAN + RDP/xrdp for WAN/Wayland
+- 🎨 **Multiple Desktops**: KDE Plasma, GNOME, or XFCE - user choice
+- ⚡ **Enterprise Scale**: 1000+ concurrent users with Kubernetes auto-scaling
+- 🔄 **Load Balancing**: Session broker distributes users across server pool
 - 👥 **User Management**: Web-based admin UI for managing users and sessions
 - 🔐 **Secure Authentication**: JWT-based auth with role-based access control
 - 📊 **Session Monitoring**: Real-time monitoring of active sessions and devices
 - 📝 **Audit Logging**: Complete audit trail of all administrative actions
-- 🐳 **Docker-based**: Easy deployment with Docker Compose
+- 🐳 **Flexible Deployment**: Docker Compose or Kubernetes
 - 🌐 **Modern Stack**: React + TypeScript + Fastify + PostgreSQL
 
 ## Architecture
@@ -27,10 +30,13 @@ LumaDesk is a complete thin client infrastructure that enables network-booted wo
                      │ Network Boot + Streaming
 ┌────────────────────┴────────────────────────────────────┐
 │                   LumaDesk Server                       │
-│  ┌──────────┬──────────┬──────────┬──────────────────┐ │
-│  │   Web    │   API    │ X Server │   PXE Server    │ │
-│  │   UI     │ Backend  │  (XDMCP) │ (TFTP/DHCP/HTTP)│ │
-│  └──────────┴──────────┴──────────┴──────────────────┘ │
+│  ┌────────────┬────────────┬──────────────────────┐ │
+│  │   Web UI   │  API/Auth  │   Session Broker     │ │
+│  └────────────┴────────────┴──────────────────────┘ │
+│  ┌─────────────────────────────────────────────────┐ │
+│  │     Desktop Server Pool (Auto-scaling)          │ │
+│  │  XFCE │ KDE │ GNOME  (X11/XDMCP + RDP)         │ │
+│  └─────────────────────────────────────────────────┘ │
 │  ┌──────────────────────────────────────────────────┐  │
 │  │            PostgreSQL Database                    │  │
 │  └──────────────────────────────────────────────────┘  │
@@ -41,10 +47,16 @@ LumaDesk is a complete thin client infrastructure that enables network-booted wo
 
 ### Prerequisites
 
+**Small Deployment (< 100 users):**
 - Docker and Docker Compose
-- Linux server (no GPU required for X server)
+- Single Linux server: 32 cores, 64GB RAM, 100GB storage
 - Network with DHCP capability
-- At least 4GB RAM and 20GB storage
+
+**Enterprise Deployment (1000+ users):**
+- Kubernetes cluster (10-30 nodes)
+- Total: 200+ cores, 500+ GB RAM
+- NFS or distributed storage
+- See [Enterprise Scale Guide](docs/ARCHITECTURE_SCALE.md)
 
 ### Installation
 

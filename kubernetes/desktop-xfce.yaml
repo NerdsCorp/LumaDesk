@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: desktop-xfce
+  namespace: lumadesk
+spec:
+  selector:
+    app: desktop-xfce
+  ports:
+    - name: xdmcp
+      port: 177
+      protocol: UDP
+    - name: x11
+      port: 6000
+      protocol: TCP
+  type: LoadBalancer  # or NodePort for on-premise
+  clusterIP: None  # Headless service for StatefulSet
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: desktop-xfce
+  namespace: lumadesk
+spec:
+  serviceName: "desktop-xfce"
+  replicas: 5  # Scale as needed (5 servers x 75 users = 375 users)
+  selector:
+    matchLabels:
+      app: desktop-xfce
+  template:
+    metadata:
+      labels:
+        app: desktop-xfce
+        desktop: xfce
+    spec:
+      containers:
+      - name: xserver
+        image: lumadesk/xserver-xfce:latest
+        ports:
+        - containerPort: 177
+          protocol: UDP
+          name: xdmcp
+        - containerPort: 6000
+          protocol: TCP
+          name: x11
+        env:
+        - name: DESKTOP_ENVIRONMENT
+          value: "xfce"
+        - name: DISPLAY_MANAGER
+          value: "lightdm"
+        resources:
+          requests:
+            memory: "16Gi"  # 75 users x 220MB each
+            cpu: "8000m"    # 8 cores
+          limits:
+            memory: "32Gi"
+            cpu: "16000m"   # 16 cores
+        volumeMounts:
+        - name: home
+          mountPath: /home
+        - name: tmp
+          mountPath: /tmp
+        securityContext:
+          capabilities:
+            add:
+            - SYS_TTY_CONFIG
+      volumes:
+      - name: tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 4Gi
+  volumeClaimTemplates:
+  - metadata:
+      name: home
+    spec:
+      accessModes: [ "ReadWriteMany" ]  # NFS/GlusterFS required
+      storageClassName: nfs-client
+      resources:
+        requests:
+          storage: 500Gi  # Shared home directories

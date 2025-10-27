@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: desktop-gnome
+  namespace: lumadesk
+spec:
+  selector:
+    app: desktop-gnome
+  ports:
+    - name: xdmcp
+      port: 177
+      protocol: UDP
+    - name: x11
+      port: 6000
+      protocol: TCP
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: desktop-gnome
+  namespace: lumadesk
+spec:
+  serviceName: "desktop-gnome"
+  replicas: 3  # 3 servers x 50 users = 150 users (GNOME is heaviest)
+  selector:
+    matchLabels:
+      app: desktop-gnome
+  template:
+    metadata:
+      labels:
+        app: desktop-gnome
+        desktop: gnome
+    spec:
+      containers:
+      - name: xserver
+        image: lumadesk/xserver-gnome:latest
+        ports:
+        - containerPort: 177
+          protocol: UDP
+        - containerPort: 6000
+          protocol: TCP
+        env:
+        - name: DESKTOP_ENVIRONMENT
+          value: "gnome"
+        resources:
+          requests:
+            memory: "28Gi"  # 50 users x 560MB each
+            cpu: "14000m"   # 14 cores
+          limits:
+            memory: "56Gi"
+            cpu: "28000m"
+        volumeMounts:
+        - name: home
+          mountPath: /home
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 10Gi
+  volumeClaimTemplates:
+  - metadata:
+      name: home
+    spec:
+      accessModes: [ "ReadWriteMany" ]
+      storageClassName: nfs-client
+      resources:
+        requests:
+          storage: 500Gi

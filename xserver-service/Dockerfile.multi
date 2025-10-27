@@ -1,0 +1,60 @@
+FROM ubuntu:22.04
+
+ARG DESKTOP=xfce
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install base X server and display manager
+RUN apt-get update && apt-get install -y \
+    xorg \
+    lightdm \
+    dbus-x11 \
+    firefox \
+    vim \
+    curl \
+    wget \
+    net-tools \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install desktop environment based on build arg
+RUN if [ "$DESKTOP" = "kde" ]; then \
+      apt-get update && apt-get install -y \
+      kde-plasma-desktop \
+      konsole \
+      dolphin \
+      kate \
+      && rm -rf /var/lib/apt/lists/*; \
+    elif [ "$DESKTOP" = "gnome" ]; then \
+      apt-get update && apt-get install -y \
+      gnome-shell \
+      gnome-terminal \
+      nautilus \
+      gedit \
+      gnome-control-center \
+      && rm -rf /var/lib/apt/lists/*; \
+    else \
+      apt-get update && apt-get install -y \
+      xfce4 \
+      xfce4-goodies \
+      && rm -rf /var/lib/apt/lists/*; \
+    fi
+
+# Configure LightDM for XDMCP
+RUN mkdir -p /etc/lightdm/lightdm.conf.d
+
+COPY lightdm-xdmcp.conf /etc/lightdm/lightdm.conf.d/50-xdmcp.conf
+COPY entrypoint-multi.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Expose XDMCP port
+EXPOSE 177/udp
+# Expose X11 ports (6000-6010)
+EXPOSE 6000-6010/tcp
+
+# Create necessary directories
+RUN mkdir -p /var/run/lightdm /var/log/lightdm /var/lib/lightdm
+
+# Health check endpoint (simple HTTP server)
+COPY health-server.sh /usr/local/bin/health-server
+RUN chmod +x /usr/local/bin/health-server
+
+ENTRYPOINT ["/entrypoint.sh"]

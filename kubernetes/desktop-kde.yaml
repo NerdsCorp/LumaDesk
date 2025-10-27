@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: desktop-kde
+  namespace: lumadesk
+spec:
+  selector:
+    app: desktop-kde
+  ports:
+    - name: xdmcp
+      port: 177
+      protocol: UDP
+    - name: x11
+      port: 6000
+      protocol: TCP
+  clusterIP: None
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: desktop-kde
+  namespace: lumadesk
+spec:
+  serviceName: "desktop-kde"
+  replicas: 3  # 3 servers x 50 users = 150 users (KDE is heavier)
+  selector:
+    matchLabels:
+      app: desktop-kde
+  template:
+    metadata:
+      labels:
+        app: desktop-kde
+        desktop: kde
+    spec:
+      containers:
+      - name: xserver
+        image: lumadesk/xserver-kde:latest
+        ports:
+        - containerPort: 177
+          protocol: UDP
+        - containerPort: 6000
+          protocol: TCP
+        env:
+        - name: DESKTOP_ENVIRONMENT
+          value: "kde"
+        resources:
+          requests:
+            memory: "24Gi"  # 50 users x 480MB each
+            cpu: "12000m"   # 12 cores
+          limits:
+            memory: "48Gi"
+            cpu: "24000m"
+        volumeMounts:
+        - name: home
+          mountPath: /home
+        - name: tmp
+          mountPath: /tmp
+      volumes:
+      - name: tmp
+        emptyDir:
+          medium: Memory
+          sizeLimit: 8Gi
+  volumeClaimTemplates:
+  - metadata:
+      name: home
+    spec:
+      accessModes: [ "ReadWriteMany" ]
+      storageClassName: nfs-client
+      resources:
+        requests:
+          storage: 500Gi
